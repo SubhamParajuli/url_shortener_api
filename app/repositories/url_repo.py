@@ -13,3 +13,10 @@ def create_url(db:Session,short_code:str,original_url:str)-> URL:
     db.refresh(url)
 
     return url
+
+def get_url_by_short_code(db:Session,
+                          short_code:str)->URL | None:
+    statement=select(URL).where(
+        URL.short_code==short_code
+    )
+    return db.scalar(statement)
