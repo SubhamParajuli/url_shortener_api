@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from app.repositories.url_repo import (
     create_url,
     get_url_by_short_code,
+    delete_url
 )
 
 def generate_short_code(length: int = 6) -> str:

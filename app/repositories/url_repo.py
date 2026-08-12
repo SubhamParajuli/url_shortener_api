@@ -20,3 +20,7 @@ def get_url_by_short_code(db:Session,
         URL.short_code==short_code
     )
     return db.scalar(statement)
+
+def delete_url(db:Session,short_code:str)->None:
+    db.delete(short_code)
+    db.commit()
