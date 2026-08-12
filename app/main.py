@@ -1,6 +1,7 @@
 import os
 
 from fastapi import FastAPI
+from app.routers.urls import router as url_router
 
 app=FastAPI(
     title="URL Shortener",
@@ -18,3 +19,6 @@ def health():
     return {
         "status": "ok",
     }
+
+
+app.include_router(url_router)
