@@ -1,3 +1,6 @@
+"""
+small file just to make redis connection object, other file import this.
+"""
 import os
 import redis
 from dotenv import load_dotenv

@@ -1,3 +1,6 @@
+"""
+this file setup database connection stuff (sqlalchemy engine, session).
+"""
 import os
 from dotenv import load_dotenv
 from collections.abc import Generator
@@ -21,10 +24,19 @@ SessionLocal=sessionmaker(
 
 
 class Base(DeclarativeBase):
+    """
+    base class, all model (like URL model) inherit from this so
+    sqlalchemy know about them.
+    """
     pass
 
 
 def get_db()->Generator[Session,None,None]:
+    """
+    dependency function for fastapi, open db session, give it to
+    route, then close it after request done (even if error happen,
+    finally block handle that).
+    """
     db=SessionLocal()
 
     try:
