@@ -1,4 +1,4 @@
-# URL Shortener
+# URL Shortener API
 
 A FastAPI-based URL shortener service backed by PostgreSQL and Redis.
 
@@ -8,27 +8,13 @@ This project lets you:
 - Redirect short codes back to the original URL
 - Delete previously created short URLs
 - Inspect simple cache metrics
-- Run the app locally or with Docker Compose
-
-## Quick Start
-
-If you already have PostgreSQL and Redis running locally:
-
-```bash
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Then open:
-
-- API docs: `http://localhost:8000/docs`
-- Health check: `http://localhost:8000/health`
-- Shorten endpoint: `http://localhost:8000/shorten`
+- Run the application locally on your machine
+- Run the complete stack with Docker Compose
+- Run automated tests and generate coverage reports
 
 ## Overview
 
-The application stores every shortened URL in PostgreSQL and uses Redis as a cache for redirect lookups. A short code is generated randomly and mapped to the original URL. When a user opens the short code, the app checks Redis first, then falls back to PostgreSQL if the value is not cached.
+The application stores shortened URLs in PostgreSQL and uses Redis as a cache for redirect lookups. When a short code is requested, the service checks Redis first and falls back to PostgreSQL if the value is not already cached.
 
 ## Architecture
 
@@ -47,37 +33,342 @@ flowchart LR
 
 ### Request Flow
 
-1. The client calls the API through Nginx or directly against FastAPI.
-2. The router sends the request to the service layer.
-3. The service layer generates a short code or resolves an existing one.
-4. The repository layer reads or writes the `urls` table in PostgreSQL.
-5. Redis stores recently used redirects to speed up repeated lookups.
-
-### Code Structure
-
-- `app/main.py` - FastAPI app entry point and health/metrics routes
-- `app/routers/urls.py` - HTTP endpoints for shorten, redirect, and delete
-- `app/services/url_service.py` - business logic, short code generation, cache handling
-- `app/repositories/url_repository.py` - database access layer
-- `app/models.py` - SQLAlchemy model for the URL table
-- `app/schemas.py` - Pydantic request/response models
-- `app/database.py` - database engine and session management
-- `app/redis_client.py` - Redis client configuration
-- `app/cache_metrics.py` - in-memory cache hit/miss counters
-- `alembic/` - database migration files
-- `tests/` - automated tests
+1. The client sends a request to the API.
+2. In Docker mode, Nginx receives the request first.
+3. Nginx distributes requests between the FastAPI instances.
+4. The FastAPI router receives the request.
+5. The service layer handles the business logic.
+6. PostgreSQL stores the URL mappings.
+7. Redis caches frequently accessed redirect mappings.
+8. Redirect requests check Redis first and PostgreSQL second.
 
 ## Tech Stack
 
 - Python 3.12
 - FastAPI
 - SQLAlchemy 2.x
-- PostgreSQL
-- Redis
+- PostgreSQL 16
+- Redis 7
 - Alembic
 - Uvicorn
 - Pytest
-- Nginx for containerized load balancing
+- pytest-cov
+- Nginx
+- Docker
+- Docker Compose
+- GitHub Actions
+
+## Project Structure
+
+```text
+url_shortener_api/
+|-- app/
+|   |-- main.py
+|   |-- database.py
+|   |-- redis_client.py
+|   |-- cache_metrics.py
+|   |-- models.py
+|   |-- schemas.py
+|   |-- routers/
+|   |   `-- urls.py
+|   |-- services/
+|   |   `-- url_service.py
+|   `-- repositories/
+|       `-- url_repository.py
+|-- alembic/
+|-- tests/
+|-- nginx/
+|-- assets/
+|-- .github/workflows/ci.yml
+|-- Dockerfile
+|-- docker-compose.yml
+|-- requirements.txt
+|-- requirements-dev.txt
+|-- pytest.ini
+`-- README.md
+```
+
+## Prerequisites
+
+### Local Development
+
+Install:
+
+- Python 3.12 or later
+- PostgreSQL 16 or later
+- Redis 7 or later
+
+### Docker Development
+
+Install:
+
+- Docker Desktop
+- Docker Compose
+
+Docker Compose will run:
+
+- PostgreSQL
+- Redis
+- Two FastAPI application containers
+- Nginx reverse proxy
+
+## Environment Variables
+
+The application uses these environment variables:
+
+- `DATABASE_URL`
+- `REDIS_URL`
+- `INSTANCE_NAME`
+- `TEST_DATABASE_URL`
+
+### Local Example
+
+Create a `.env` file with:
+
+```env
+DATABASE_URL="postgresql+psycopg2://urluser:urlpassword@localhost:5434/urlshortener"
+REDIS_URL="redis://localhost:6379/0"
+INSTANCE_NAME="local"
+```
+
+### Docker Example
+
+Inside Docker, the services talk to each other by service name, not by `localhost`:
+
+```env
+DATABASE_URL="postgresql+psycopg2://urluser:urlpassword@postgres:5432/urlshortener"
+REDIS_URL="redis://redis:6379/0"
+INSTANCE_NAME="api1"
+```
+
+### Important Port Notes
+
+- Local PostgreSQL: `localhost:5434`
+- Docker PostgreSQL service: `postgres:5432`
+- Local Redis: `localhost:6379`
+- Docker Redis service: `redis:6379`
+- Docker Nginx entry point: `http://localhost:8000`
+
+## Run Locally
+
+This mode runs FastAPI directly on your machine while PostgreSQL and Redis run separately. You can use either locally installed services or services started through Docker.
+
+### 1. Clone the Repository
+
+```bash
+git clone <repository-url>
+cd url_shortener_api
+```
+
+### 2. Create a Virtual Environment
+
+#### Windows PowerShell
+
+```powershell
+python -m venv myenv
+myenv\Scripts\activate
+```
+
+#### macOS / Linux
+
+```bash
+python3 -m venv myenv
+source myenv/bin/activate
+```
+
+### 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+For development and testing:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+### 4. Start PostgreSQL and Redis
+
+Make sure these services are reachable before starting the API:
+
+- PostgreSQL on `localhost:5434`
+- Redis on `localhost:6379`
+
+The default local database name is `urlshortener`.
+
+### 5. Configure Environment Variables
+
+Create or update `.env`:
+
+```env
+DATABASE_URL="postgresql+psycopg2://urluser:urlpassword@localhost:5434/urlshortener"
+REDIS_URL="redis://localhost:6379/0"
+INSTANCE_NAME="local"
+```
+
+### 6. Run Database Migrations
+
+Apply the schema migration:
+
+```bash
+alembic upgrade head
+```
+
+This creates the tables required by the application, including `urls`.
+
+### 7. Start the API Server
+
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### 8. Open the Application
+
+- API root: `http://localhost:8000/`
+- API docs: `http://localhost:8000/docs`
+- Health check: `http://localhost:8000/health`
+
+If you are running the API on the same device, `localhost` will open it directly in your browser.
+
+## Run With Docker Compose
+
+This is the easiest way to run the full stack.
+
+### 1. Build and Start the Containers
+
+```bash
+docker compose up -d --build
+```
+
+### 2. Check the Running Services
+
+```bash
+docker compose ps
+```
+
+Expected services:
+
+- `postgres`
+- `redis`
+- `api1`
+- `api2`
+- `nginx`
+
+### 3. Run Database Migrations
+
+After the containers are up, apply the schema migration:
+
+```bash
+docker compose run --rm api1 alembic upgrade head
+```
+
+You can also verify the migration state with:
+
+```bash
+docker compose run --rm api1 alembic current
+```
+
+### 4. Open the Application
+
+Open:
+
+```text
+http://localhost:8000
+```
+
+Nginx listens on port `8000` and distributes requests between the two FastAPI containers.
+
+Useful endpoints:
+
+- `http://localhost:8000/docs`
+- `http://localhost:8000/health`
+
+### 5. Stop the Stack
+
+```bash
+docker compose down
+```
+
+To remove the database volume as well:
+
+```bash
+docker compose down -v
+```
+
+## Database Migrations
+
+This project uses Alembic to manage schema changes.
+
+Common commands:
+
+```bash
+alembic current
+alembic heads
+alembic upgrade head
+alembic downgrade -1
+alembic revision --autogenerate -m "describe your change"
+```
+
+Important note:
+
+- Starting FastAPI with `uvicorn` does not automatically create database tables.
+- For a fresh database, always run `alembic upgrade head` first.
+
+## Testing
+
+Run the test suite with:
+
+```bash
+pytest
+```
+
+For verbose output:
+
+```bash
+pytest -v
+```
+
+Run a specific test file:
+
+```bash
+pytest tests/test_urls.py
+```
+
+### Test Database
+
+Tests use a separate PostgreSQL database:
+
+- `urlshortener_test`
+
+The default local test connection string is:
+
+```text
+postgresql+psycopg2://urluser:urlpassword@localhost:5434/urlshortener_test
+```
+
+If needed, set it explicitly before running tests:
+
+```powershell
+$env:TEST_DATABASE_URL="postgresql+psycopg2://urluser:urlpassword@localhost:5434/urlshortener_test"
+pytest
+```
+
+The test fixture creates and drops tables automatically for each test run.
+
+### Test Coverage
+
+Generate an HTML coverage report with:
+
+```bash
+pytest --cov=app --cov-report=term-missing --cov-report=html
+```
+
+The report is written to:
+
+```text
+htmlcov/index.html
+```
 
 ## API Endpoints
 
@@ -121,8 +412,6 @@ Response:
 
 Returns the instance name from the `INSTANCE_NAME` environment variable.
 
-This is most useful in Docker mode where multiple app instances run behind Nginx.
-
 Example:
 
 ```bash
@@ -139,13 +428,15 @@ Response:
 
 ### `GET /metrics/cache`
 
-Returns in-memory cache statistics:
+Returns cache statistics.
 
 Example:
 
 ```bash
 curl http://localhost:8000/metrics/cache
 ```
+
+Response:
 
 ```json
 {
@@ -217,220 +508,49 @@ Response:
 }
 ```
 
-## Project Structure
-
-```text
-app/
-  main.py
-  database.py
-  redis_client.py
-  cache_metrics.py
-  models.py
-  schemas.py
-  routers/
-  services/
-  repositories/
-alembic/
-tests/
-docker-compose.yml
-Dockerfile
-nginx/
-```
-
-## Prerequisites
-
-For local development, install:
-
-- Python 3.12 or later
-- PostgreSQL
-- Redis
-
-If you use Docker, you only need:
-
-- Docker
-- Docker Compose
-
-## Environment Variables
-
-The app uses these variables:
-
-- `DATABASE_URL` - PostgreSQL connection string
-- `REDIS_URL` - Redis connection string
-- `INSTANCE_NAME` - optional label returned by `GET /instance`
-
-Example `.env`:
-
-```env
-DATABASE_URL="postgresql+psycopg2://urluser:urlpassword@localhost:5434/urlshortener"
-REDIS_URL="redis://localhost:6379/0"
-```
-
-## Run Locally Step by Step
-
-### 1. Clone the repository
-
-```bash
-git clone <repository-url>
-cd url_shortner
-```
-
-### 2. Create and activate a virtual environment
-
-```bash
-python -m venv myenv
-myenv\Scripts\activate
-```
-
-On macOS/Linux:
-
-```bash
-python3 -m venv myenv
-source myenv/bin/activate
-```
-
-### 3. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Start PostgreSQL and Redis
-
-Make sure PostgreSQL is running and reachable on port `5434`, and Redis is reachable on port `6379`.
-
-This project expects the local database name `urlshortener`.
-
-### 5. Configure environment variables
-
-Create or update `.env` with:
-
-```env
-DATABASE_URL="postgresql+psycopg2://urluser:urlpassword@localhost:5434/urlshortener"
-REDIS_URL="redis://localhost:6379/0"
-```
-
-### 6. Run database migrations
-
-Apply the schema migration with Alembic:
-
-```bash
-alembic upgrade head
-```
-
-This creates the `urls` table used by the service.
-
-### 7. Start the API server
-
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-### 8. Open the app
-
-- API root: `http://localhost:8000/`
-- Docs: `http://localhost:8000/docs`
-- Health check: `http://localhost:8000/health`
-
-## Run With Docker Step by Step
-
-This is the easiest way to run the full stack.
-
-### 1. Build and start the containers
-
-```bash
-docker compose up -d --build
-```
-
-### 2. What starts
-
-- `postgres` - PostgreSQL database
-- `redis` - Redis cache
-- `api1` - first FastAPI container
-- `api2` - second FastAPI container
-- `nginx` - reverse proxy and load balancer
-
-### 3. Access the app
-
-Open:
-
-```text
-http://localhost:8000
-```
-
-Nginx listens on port `8000` and distributes requests between the two FastAPI containers.
-
-### 4. Stop the stack
-
-```bash
-docker compose down
-```
-
-To remove the database volume as well:
-
-```bash
-docker compose down -v
-```
-
 ## Example Usage
 
-### Create a short URL
+### Create a Short URL
 
-```bash
-curl -X POST "http://localhost:8000/shorten" -H "Content-Type: application/json" -d '{"url":"https://github.com"}'
-```
-
-If you prefer PowerShell:
+Windows PowerShell:
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri "http://localhost:8000/shorten" -ContentType "application/json" -Body '{"url":"https://github.com"}'
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:8000/shorten" `
+  -ContentType "application/json" `
+  -Body '{"url":"https://github.com"}'
 ```
 
-### Open the short URL
+Linux / macOS:
 
-Visit the `short_url` returned by the API in your browser, or use:
+```bash
+curl -X POST "http://localhost:8000/shorten" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://github.com"}'
+```
+
+### Open the Short URL
+
+If the API returns:
+
+```json
+{
+  "short_code": "a1B2c3",
+  "short_url": "http://localhost:8000/a1B2c3"
+}
+```
+
+Open that URL in your browser or use:
 
 ```bash
 curl -i "http://localhost:8000/a1B2c3"
 ```
 
-### Delete a short URL
+### Delete the Short URL
 
 ```bash
 curl -X DELETE "http://localhost:8000/a1B2c3"
-```
-
-## Testing
-
-Run the test suite with:
-
-```bash
-pytest
-```
-
-### Test database note
-
-The tests use a separate PostgreSQL database named `urlshortener_test` on `localhost:5434`.
-
-Before running tests, make sure that database exists and is empty.
-
-Example SQL:
-
-```sql
-CREATE DATABASE urlshortener_test;
-```
-
-The test fixture creates and drops tables automatically.
-
-## Database Migrations
-
-The repository includes an initial Alembic migration that creates the `urls` table.
-
-Useful commands:
-
-```bash
-alembic revision --autogenerate -m "message"
-alembic upgrade head
-alembic downgrade -1
 ```
 
 ## How It Works Internally
@@ -458,12 +578,78 @@ alembic downgrade -1
 
 ## Troubleshooting
 
-- If the app cannot connect to PostgreSQL, verify `DATABASE_URL`, the database name, and the port.
-- If redirects are not being cached, verify Redis is running and reachable through `REDIS_URL`.
-- If `pytest` fails immediately, check that the `urlshortener_test` database exists.
-- If Docker Compose fails on startup, confirm ports `8000`, `5434`, and `6379` are free.
+### PostgreSQL Connection Failed
+
+If the app cannot connect to PostgreSQL, verify:
+
+- `DATABASE_URL`
+- The database name
+- The port
+- That PostgreSQL is running
+
+Local PostgreSQL should use `localhost:5434`.
+Docker containers should use `postgres:5432`.
+
+### Redis Connection Failed
+
+If redirects are not being cached, verify:
+
+- `REDIS_URL`
+- That Redis is running
+- That Redis is reachable on the expected port
+
+Local Redis should use `localhost:6379`.
+Docker containers should use `redis:6379`.
+
+### `relation "urls" does not exist`
+
+This means the database is reachable, but migrations have not been applied yet.
+
+Run:
+
+```bash
+alembic upgrade head
+```
+
+Or, in Docker:
+
+```bash
+docker compose run --rm api1 alembic upgrade head
+```
+
+### Tests Cannot Connect to PostgreSQL
+
+Make sure the test database exists:
+
+- `urlshortener_test`
+
+If needed, create it manually:
+
+```sql
+CREATE DATABASE urlshortener_test;
+```
+
+### The App Does Not Open in the Browser
+
+If `http://localhost:8000` does not load:
+
+- Check that the API server is running locally
+- Check `docker compose ps` if using Docker
+- Check Nginx logs with `docker compose logs nginx`
+
+### Docker Containers Are Running but Tables Are Missing
+
+Running the containers does not automatically apply migrations.
+
+Apply them explicitly:
+
+```bash
+docker compose run --rm api1 alembic upgrade head
+```
 
 ## Notes
 
-- The short URL shown in responses is currently built using `http://localhost:8000`.
-- Cache hit/miss counters are stored in memory, so they reset when the app process restarts.
+- The short URL returned by the API is currently built using `http://localhost:8000`.
+- Cache hit and miss counters are stored in memory, so they reset when the application restarts.
+- PostgreSQL data persists in the Docker volume unless the volume is removed with `docker compose down -v`.
+- The `.env` file should not be committed to Git.

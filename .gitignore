@@ -11,3 +11,4 @@ venv/
 htmlcov/
 
 .env
+readme_ref.md
