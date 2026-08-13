@@ -11,9 +11,11 @@ from app.database import Base, get_db
 from app.main import app
 
 
-TEST_DATABASE_URL = (
-    "postgresql+psycopg2://"
-    "urluser:urlpassword@localhost:5434/urlshortener_test"
+import os
+
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+psycopg2://urluser:urlpassword@localhost:5434/urlshortener_test",
 )
 """hardcoded connection string for test postgres db (different port 5434 so it dont clash with dev db)"""
 
@@ -55,4 +57,6 @@ def client():
     """
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
+    
