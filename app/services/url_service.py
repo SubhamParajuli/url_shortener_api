@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from app.redis_client import redis_client
 from app.cache_metrics import cache_metrics
 from redis.exceptions import RedisError
-from app.repositories.url_repo import (
+from app.repositories.url_repository import (
     create_url,
     get_url_by_short_code,
     delete_url

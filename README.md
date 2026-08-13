@@ -338,7 +338,7 @@ This is the easiest way to run the full stack.
 ### 1. Build and start the containers
 
 ```bash
-docker compose up --build
+docker compose up -d --build
 ```
 
 ### 2. What starts
