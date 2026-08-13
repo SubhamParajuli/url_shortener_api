@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">URL Shortener Architecture</title>
+  <desc id="desc">Client connects to Nginx, which load balances requests to two FastAPI instances. Both instances use Redis and PostgreSQL.</desc>
+  <defs>
+    <style>
+      .bg { fill: #0f172a; }
+      .card { fill: #111827; stroke: #334155; stroke-width: 2; rx: 18; ry: 18; }
+      .title { fill: #e2e8f0; font: 700 28px Arial, sans-serif; }
+      .label { fill: #e2e8f0; font: 600 20px Arial, sans-serif; }
+      .text { fill: #cbd5e1; font: 16px Arial, sans-serif; }
+      .accent { fill: #38bdf8; }
+      .accent2 { fill: #34d399; }
+      .accent3 { fill: #f59e0b; }
+      .line { stroke: #94a3b8; stroke-width: 4; fill: none; }
+      .dash { stroke-dasharray: 10 8; }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="520" rx="24" ry="24"/>
+  <text class="title" x="40" y="52">URL Shortener Architecture</text>
+
+  <rect class="card" x="40" y="110" width="160" height="90"/>
+  <text class="label" x="120" y="155" text-anchor="middle">Client</text>
+  <text class="text" x="120" y="178" text-anchor="middle">Browser / API</text>
+
+  <rect class="card" x="250" y="110" width="170" height="90"/>
+  <text class="label" x="335" y="155" text-anchor="middle">Nginx</text>
+  <text class="text" x="335" y="178" text-anchor="middle">Reverse proxy</text>
+
+  <rect class="card" x="470" y="70" width="170" height="90"/>
+  <text class="label" x="555" y="115" text-anchor="middle">FastAPI 1</text>
+  <text class="text" x="555" y="138" text-anchor="middle">api1 container</text>
+
+  <rect class="card" x="470" y="190" width="170" height="90"/>
+  <text class="label" x="555" y="235" text-anchor="middle">FastAPI 2</text>
+  <text class="text" x="555" y="258" text-anchor="middle">api2 container</text>
+
+  <rect class="card" x="720" y="80" width="170" height="90"/>
+  <text class="label" x="805" y="125" text-anchor="middle">Redis</text>
+  <text class="text" x="805" y="148" text-anchor="middle">Cache layer</text>
+
+  <rect class="card" x="720" y="220" width="170" height="90"/>
+  <text class="label" x="805" y="265" text-anchor="middle">PostgreSQL</text>
+  <text class="text" x="805" y="288" text-anchor="middle">Persistent storage</text>
+
+  <rect class="card" x="940" y="150" width="220" height="110"/>
+  <text class="label" x="1050" y="198" text-anchor="middle">urls table</text>
+  <text class="text" x="1050" y="222" text-anchor="middle">short_code -> original_url</text>
+
+  <path class="line" d="M200 155 H250" marker-end="url(#arrow)"/>
+  <path class="line" d="M420 155 H470" marker-end="url(#arrow)"/>
+  <path class="line" d="M640 115 H720" marker-end="url(#arrow)"/>
+  <path class="line" d="M640 235 H720" marker-end="url(#arrow)"/>
+  <path class="line" d="M890 265 H940" marker-end="url(#arrow)"/>
+  <path class="line dash" d="M555 160 C555 210, 690 210, 720 160" marker-end="url(#arrow)"/>
+  <path class="line dash" d="M555 280 C555 320, 690 320, 720 265" marker-end="url(#arrow)"/>
+
+  <text class="text" x="700" y="55" text-anchor="middle">FastAPI checks Redis first, then falls back to PostgreSQL</text>
+  <circle class="accent" cx="70" cy="70" r="8"/>
+  <circle class="accent2" cx="95" cy="70" r="8"/>
+  <circle class="accent3" cx="120" cy="70" r="8"/>
+</svg>
